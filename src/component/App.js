@@ -5,8 +5,9 @@ import scriptLoader from 'react-async-script-loader';
 import {createFilter} from 'react-search-input';
 import { mapStyles } from '../mapStyles.js';
 
-var markers = [];
-var infoWindows = [];
+let markers = [];
+let infoWindows = [];
+let APIKEY = "";
 
 class App extends Component {
   constructor(props) {
@@ -25,7 +26,7 @@ class App extends Component {
   componentWillReceiveProps({isScriptLoadSucceed}){
     if (isScriptLoadSucceed) {
       // initiating the map and giving it to the loadMarkers function.
-      var map = new window.google.maps.Map(document.getElementById('map'), {
+      let map = new window.google.maps.Map(document.getElementById('map'), {
         zoom: 11,
         center: new window.google.maps.LatLng(30.04295,31.236708),
         styles: mapStyles
@@ -34,7 +35,6 @@ class App extends Component {
       this.loadMarkers(map)
     }
     else {
-      console.log("google maps API couldn't load.");
       this.setState({requestWasSuccessful: false})
     }
   }
@@ -43,27 +43,27 @@ class App extends Component {
   // foursquares API to find the neariest museums and added the markers and
   // inforwindows to the markers
   loadMarkers(map) {
-    var CORSRequest = this.createCORSRequest('GET',"https://api.foursquare.com/v2/venues/search?ll=30.04295,31.236708&query=museum&radius=25000&categoryId=4bf58dd8d48988d181941735,507c8c4091d498d9fc8c67a9,4deefb944765f83613cdba6e,52e81612bcbc57f1066b79ed&client_id=0NFHNPFDM1YD5IOQWUWPQLS1J2KPRDRQ1AJFLTCMTC1LRL5F&client_secret=YVV3FLZKWU1OKC2UJQI1FBA1U3MMPZ5DSXMLEOTYN2H3AQCN&v=20201215&limit=50");
+    let CORSRequest = this.createCORSRequest('GET',"https://api.foursquare.com/v2/venues/search?ll=30.04295,31.236708&query=museum&radius=25000&categoryId=4bf58dd8d48988d181941735,507c8c4091d498d9fc8c67a9,4deefb944765f83613cdba6e,52e81612bcbc57f1066b79ed&client_id=0NFHNPFDM1YD5IOQWUWPQLS1J2KPRDRQ1AJFLTCMTC1LRL5F&client_secret=YVV3FLZKWU1OKC2UJQI1FBA1U3MMPZ5DSXMLEOTYN2H3AQCN&v=20201215&limit=50");
     CORSRequest.onload = () => {
-      this.setState({ places: JSON.parse(CORSRequest.responseText).response.venues.filter(createFilter(this.state.query, ['name', 'location.address']))});
+      CORSRequest.responseText? this.setState({ places: JSON.parse(CORSRequest.responseText).response.venues.filter(createFilter(this.state.query, ['name', 'location.address']))}) : "";
       markers.forEach(m => { m.setMap(null) });
       // Clearing the markers and the infoWindows arrays so that the old
       // objects wouldn't be stacked below the new objects.
       markers = [];
       infoWindows = [];
       this.state.places.map(place => {
-        var contentString =
+        let contentString =
         `<div class="infoWindow">
           <h1>${place.name}</h1>
           <h2>${place.location.address ? place.location.address : place.location.formattedAddress[0]}</h2>
           ${place.url ? "<a href=" + place.url + ">Go to official website</a>" : ""}
         </div>`
 
-        var infoWindow= new window.google.maps.InfoWindow({
+        let infoWindow= new window.google.maps.InfoWindow({
           content: contentString,
           name: place.name
         });
-        var marker = new window.google.maps.Marker({
+        let marker = new window.google.maps.Marker({
           map: map,
           position: place.location,
           animation: window.google.maps.Animation.DROP,
@@ -93,11 +93,14 @@ class App extends Component {
 
   // Used the tutorial in https://www.html5rocks.com/en/tutorials/cors/ to create a CORS request function.
   createCORSRequest(method, url) {
-    var xhr = new XMLHttpRequest();
+    let xhr = new XMLHttpRequest();
     if ("withCredentials" in xhr) {
       // Check if the XMLHttpRequest object has a "withCredentials" property.
       // "withCredentials" only exists on XMLHTTPRequest2 objects.
       xhr.open(method, url, true);
+      xhr.onerror = function () {
+        console.log("** An error occurred during the transaction");
+      }
     } else if (typeof XDomainRequest !== "undefined") {
       // Otherwise, check if XDomainRequest.
       // XDomainRequest only exists in IE, and is IE's way of making CORS requests.
